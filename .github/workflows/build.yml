@@ -1,4 +1,4 @@
-name: Build WDA for iOS 18
+name: Build WDA for iOS 18 (merged xctest)
 
 on:
   workflow_dispatch:
@@ -46,23 +46,81 @@ jobs:
             clean build \
             CONFIGURATION_BUILD_DIR=$PWD/build 2>&1 | tail -30
 
-      - name: Ad-hoc sign
+      - name: Fix xctest signing for Sideloadly
         run: |
           APP="$PWD/build/WebDriverAgentRunner-Runner.app"
-          find "$APP" -name "*.framework" -type d | while read fw; do
-            BIN="$fw/$(basename ${fw%.framework})"
-            [ -f "$BIN" ] && codesign --force --sign - "$BIN" 2>/dev/null || true
+          XCTEST="$APP/PlugIns/WebDriverAgentRunner.xctest"
+          FRAMEWORKS="$APP/Frameworks"
+          
+          echo "=== Before fix ==="
+          ls -la "$XCTEST/"
+          ls -la "$XCTEST/Frameworks/" 2>/dev/null || true
+          
+          # Move xctest's internal framework to main Frameworks
+          if [ -d "$XCTEST/Frameworks" ]; then
+            for fw in "$XCTEST/Frameworks/"*.framework; do
+              if [ -d "$fw" ]; then
+                fw_name=$(basename "$fw")
+                echo "Moving $fw_name from xctest to main Frameworks"
+                cp -R "$fw" "$FRAMEWORKS/$fw_name" 2>/dev/null || true
+              fi
+            done
+            rm -rf "$XCTEST/Frameworks"
+          fi
+          
+          # Convert xctest binary into a dylib in Frameworks
+          # This way Sideloadly will sign it as part of Frameworks
+          XCTEST_BIN="$XCTEST/WebDriverAgentRunner"
+          if [ -f "$XCTEST_BIN" ]; then
+            echo "Creating WebDriverAgentRunner.framework from xctest binary"
+            mkdir -p "$FRAMEWORKS/WebDriverAgentRunner.framework"
+            cp "$XCTEST_BIN" "$FRAMEWORKS/WebDriverAgentRunner.framework/WebDriverAgentRunner"
+            
+            # Create Info.plist for framework
+            cat > "$FRAMEWORKS/WebDriverAgentRunner.framework/Info.plist" << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.facebook.WebDriverAgentRunner</string>
+  <key>CFBundleName</key>
+  <string>WebDriverAgentRunner</string>
+  <key>CFBundleExecutable</key>
+  <string>WebDriverAgentRunner</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>CFBundlePackageType</key>
+  <string>FMWK</string>
+</dict>
+</plist>
+PLIST
+          fi
+          
+          # Now sign EVERYTHING properly with the SAME ad-hoc identity
+          # Sign all frameworks first (inner to outer)
+          find "$APP/Frameworks" -name "*.framework" -type d | while read fw; do
+            echo "Signing: $(basename $fw)"
+            codesign --force --sign - --timestamp=none --generate-entitlement-der "$fw"
           done
-          find "$APP/PlugIns" -name "*.xctest" -type d | while read xt; do
-            BIN="$xt/$(basename ${xt%.xctest})"
-            [ -f "$BIN" ] && codesign --force --sign - "$BIN"
-          done
-          find "$APP" -name "*.dylib" | while read f; do
-            codesign --force --sign - "$f" 2>/dev/null || true
-          done
-          MAIN="$APP/WebDriverAgentRunner-Runner"
-          [ -f "$MAIN" ] && codesign --force --sign - "$MAIN"
-          codesign --force --deep --sign - "$APP"
+          
+          # Sign xctest binary 
+          if [ -f "$XCTEST_BIN" ]; then
+            echo "Signing xctest binary"
+            codesign --force --sign - --timestamp=none --generate-entitlement-der "$XCTEST_BIN"
+          fi
+          
+          # Sign xctest bundle
+          echo "Signing xctest bundle"
+          codesign --force --sign - --timestamp=none --generate-entitlement-der "$XCTEST"
+          
+          # Sign main app
+          echo "Signing main app"
+          codesign --force --sign - --timestamp=none --generate-entitlement-der "$APP"
+          
+          echo "=== Verification ==="
+          codesign -dvvv "$XCTEST_BIN" 2>&1 | head -5
+          codesign --verify --deep "$APP" 2>&1 || true
 
       - name: Package IPA
         run: |
@@ -74,6 +132,6 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: WDA-iOS18
+          name: WDA-iOS18-v2
           path: WebDriverAgent-iOS18.ipa
           retention-days: 30
