@@ -78,8 +78,8 @@ jobs:
             
             # Create Info.plist for framework
             cat > "$FRAMEWORKS/WebDriverAgentRunner.framework/Info.plist" << 'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
@@ -95,7 +95,7 @@ jobs:
 </dict>
 </plist>
 PLIST
-          fi
+          fi  
           
           # Now sign EVERYTHING properly with the SAME ad-hoc identity
           # Sign all frameworks first (inner to outer)
