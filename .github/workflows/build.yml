@@ -67,58 +67,38 @@ jobs:
             done
             rm -rf "$XCTEST/Frameworks"
           fi
-                - name: Fix xctest signing for Sideloadly
-                        run: |
-                                  APP="$PWD/build/WebDriverAgentRunner-Runner.app"
-                                            XCTEST="$APP/PlugIns/WebDriverAgentRunner.xctest"
-                                                      XCTEST_BIN="$XCTEST/WebDriverAgentRunner"
-                                                                FRAMEWORKS="$APP/Frameworks"
-                                                                          
-                                                                                    if [ -d "$FRAMEWORKS/WebDriverAgentRunner.framework" ]; then
-                                                                                                echo "Removing existing WebDriverAgentRunner.framework"
-                                                                                                            rm -rf "$FRAMEWORKS/WebDriverAgentRunner.framework"
-                                                                                                                      fi
-                                                                                                                                
-                                                                                                                                          if [ -f "$XCTEST_BIN" ]; then
-                                                                                                                                                      echo "Creating WebDriverAgentRunner.framework from xctest binary"
-                                                                                                                                                                  mkdir -p "$FRAMEWORKS/WebDriverAgentRunner.framework"
-                                                                                                                                                                              cp "$XCTEST_BIN" "$FRAMEWORKS/WebDriverAgentRunner.framework/WebDriverAgentRunner"
-                                                                                                                                                                                          
-                                                                                                                                                                                                      # Create Info.plist for framework
-                                                                                                                                                                                                                  cat > "$FRAMEWORKS/WebDriverAgentRunner.framework/Info.plist" << 'PLIST'
-                                                                                                                                                                                                                              <?xml version="1.0" encoding="UTF-8"?>
-                                                                                                                                                                                                                                          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-                                                                                                                                                                                                                                                      <plist version="1.0">
-                                                                                                                                                                                                                                                                  <dict>
-                                                                                                                                                                                                                                                                                <key>CFBundleIdentifier</key>
-                                                                                                                                                                                                                                                                                              <string>com.facebook.WebDriverAgentRunner</string>
-                                                                                                                                                                                                                                                                                                            <key>CFBundleName</key>
-                                                                                                                                                                                                                                                                                                                          <string>WebDriverAgentRunner</string>
-                                                                                                                                                                                                                                                                                                                                        <key>CFBundleExecutable</key>
-                                                                                                                                                                                                                                                                                                                                                      <string>WebDriverAgentRunner</string>
-                                                                                                                                                                                                                                                                                                                                                                    <key>CFBundleVersion</key>
-                                                                                                                                                                                                                                                                                                                                                                                  <string>1</string>
-                                                                                                                                                                                                                                                                                                                                                                                                <key>CFBundlePackageType</key>
-                                                                                                                                                                                                                                                                                                                                                                                                              <string>FMWK</string>
-                                                                                                                                                                                                                                                                                                                                                                                                                          </dict>
-                                                                                                                                                                                                                                                                                                                                                                                                                                      </plist>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                  PLIST
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            fi
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                  - name: Package IPA
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                          run: |
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    mkdir Payload
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              cp -r build/WebDriverAgentRunner-Runner.app Payload/
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        zip -r WebDriverAgent-iOS18.ipa Payload/
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ls -lh WebDriverAgent-iOS18.ipa
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - name: Upload
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                uses: actions/upload-artifact@v4
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        with:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  name: WDA-iOS18-v3
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            path: WebDriverAgent-iOS18.ipa
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      retention-days: 30
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      find "$APP/Frameworks" -name "*.framework" -type d | while read fw; do
+          
+          # Convert xctest binary into a dylib in Frameworks
+          XCTEST_BIN="$XCTEST/WebDriverAgentRunner"
+          if [ -f "$XCTEST_BIN" ]; then
+            echo "Creating WebDriverAgentRunner.framework from xctest binary"
+            mkdir -p "$FRAMEWORKS/WebDriverAgentRunner.framework"
+            cp "$XCTEST_BIN" "$FRAMEWORKS/WebDriverAgentRunner.framework/WebDriverAgentRunner"
+            
+            # Create Info.plist for framework
+            cat > "$FRAMEWORKS/WebDriverAgentRunner.framework/Info.plist" << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.facebook.WebDriverAgentRunner</string>
+  <key>CFBundleName</key>
+  <string>WebDriverAgentRunner</string>
+  <key>CFBundleExecutable</key>
+  <string>WebDriverAgentRunner</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>CFBundlePackageType</key>
+  <string>FMWK</string>
+</dict>
+</plist>
+PLIST
+          fi
+          
+          # Now sign EVERYTHING properly with the SAME ad-hoc identity
+          # Sign all frameworks first (inner to outer)
+          find "$APP/Frameworks" -name "*.framework" -type d | while read fw; do
             echo "Signing: $(basename $fw)"
             codesign --force --sign - --timestamp=none --generate-entitlement-der "$fw"
           done
@@ -141,17 +121,17 @@ jobs:
           codesign -dvvv "$XCTEST_BIN" 2>&1 | head -5
           codesign --verify --deep "$APP" 2>&1 || true
 
-            - name: Package IPA
-                    run: |
-                              mkdir Payload
-                                        cp -r build/WebDriverAgentRunner-Runner.app Payload/
-                                                  zip -r WebDriverAgent-iOS18.ipa Payload/
-                                                            ls -lh WebDriverAgent-iOS18.ipa
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          cp -r build/WebDriverAgentRunner-Runner.app Payload/
+          zip -r WebDriverAgent-iOS18.ipa Payload/
+          ls -lh WebDriverAgent-iOS18.ipa
 
-                                                                  - name: Upload
-                                                                          uses: actions/upload-artifact@v4
-                                                                                  with:
-                                                                                            name: WDA-iOS18-v2
-                                                                                                      path: WebDriverAgent-iOS18.ipa
-                                                                                                                retention-days: 30
-                                                                                                                
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: WDA-iOS18-v2
+          path: WebDriverAgent-iOS18.ipa
+          retention-days: 30
+
