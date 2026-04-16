@@ -76,24 +76,23 @@ jobs:
             cp "$XCTEST_BIN" "$FRAMEWORKS/WebDriverAgentRunner.framework/WebDriverAgentRunner"
             
             # Create Info.plist for framework
-            cat > "$FRAMEWORKS/WebDriverAgentRunner.framework/Info.plist" << 'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleIdentifier</key>
-  <string>com.facebook.WebDriverAgentRunner</string>
-  <key>CFBundleName</key>
-  <string>WebDriverAgentRunner</string>
-  <key>CFBundleExecutable</key>
-  <string>WebDriverAgentRunner</string>
-  <key>CFBundleVersion</key>
-  <string>1</string>
-  <key>CFBundlePackageType</key>
-  <string>FMWK</string>
-</dict>
-</plist>
-PLIST
+            PLIST_FILE="$FRAMEWORKS/WebDriverAgentRunner.framework/Info.plist"
+            echo '<?xml version="1.0" encoding="UTF-8"?>' > "$PLIST_FILE"
+            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$PLIST_FILE"
+            echo '<plist version="1.0">' >> "$PLIST_FILE"
+            echo '<dict>' >> "$PLIST_FILE"
+            echo '  <key>CFBundleIdentifier</key>' >> "$PLIST_FILE"
+            echo '  <string>com.facebook.WebDriverAgentRunner</string>' >> "$PLIST_FILE"
+            echo '  <key>CFBundleName</key>' >> "$PLIST_FILE"
+            echo '  <string>WebDriverAgentRunner</string>' >> "$PLIST_FILE"
+            echo '  <key>CFBundleExecutable</key>' >> "$PLIST_FILE"
+            echo '  <string>WebDriverAgentRunner</string>' >> "$PLIST_FILE"
+            echo '  <key>CFBundleVersion</key>' >> "$PLIST_FILE"
+            echo '  <string>1</string>' >> "$PLIST_FILE"
+            echo '  <key>CFBundlePackageType</key>' >> "$PLIST_FILE"
+            echo '  <string>FMWK</string>' >> "$PLIST_FILE"
+            echo '</dict>' >> "$PLIST_FILE"
+            echo '</plist>' >> "$PLIST_FILE"
           fi
           
           # Now sign EVERYTHING properly with the SAME ad-hoc identity
